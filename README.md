@@ -7,6 +7,7 @@ A Python script to analyse BACnet PCAP results and generate device hardware inve
 * Extracts original IP addresses routed inside BBMD Forwarded-NPDUs.
 * Associates Instance IDs with physical MAC/IP addresses and `I-Am` packets.
 * Generates a clean, simplified CSV (`<pcap_name>_results.csv`) formatted for building automation auditing and analysis.
+* Dynamically extracts the Site Identifier directly from the PCAP filename.
 
 ## Prerequisites
 The script requires **TShark** (the command-line engine for Wireshark), version 4.0 or higher.
@@ -46,7 +47,7 @@ The script will print a summary of the capture metadata and device counts:
 ========================================
       BACnet Packet Capture Results
 ========================================
-File:           building-name-capture_2025-12-29.pcap
+File:           us-pao-em15-mx1-1-01_2025-12-29_17-37-45.pcap
 Duration:       0 hours 59 minutes (3598.47 seconds)
 ----------------------------------------
 Total IP Endpoints:  119
@@ -55,7 +56,7 @@ Total MSTP Devices:  19
 Total Entries Found: 138
 ========================================
 
-[+] Successfully saved BACnet Packet Capture Results to: building-name-capture_2025-12-29_results.csv
+[+] Successfully saved BACnet Packet Capture Results to: us-pao-em15-mx1-1-01_2025-12-29_17-37-45_results.csv
 ```
 
 ## CSV Output Columns
@@ -64,7 +65,7 @@ The CSV export has been streamlined to include only vital hardware and routing i
 
 | Column Name | Description |
 | :--- | :--- |
-| **Site Identifier** | Static field for site or building categorisation (defaults to `building-name`). |
+| **Site Identifier** | Dynamically extracted from the PCAP filename (e.g., `us-pao-em15`). |
 | **Instance Number** | The Logical BACnet Device ID (extracted safely from `I-Am` packets). |
 | **Network Address** | The physical location on the network (e.g., `100.67.24.91:47808` for IP endpoints or `Net: 32121/4` for MS/TP devices where the MAC is appended). |
 | **Manufacturer** | The vendor name, translated directly from the official ASHRAE Vendor ID registry. |

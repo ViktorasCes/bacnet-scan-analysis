@@ -24,7 +24,6 @@ def get_pcap_info(pcap_file):
     """Uses Wireshark's capinfos utility to extract file metadata."""
     info = {'duration': 'Unknown'}
     try:
-        # -u flag extracts the duration
         cmd = ["capinfos", "-u", pcap_file]
         res = subprocess.run(cmd, capture_output=True, text=True)
         for line in res.stdout.split('\n'):
@@ -158,7 +157,10 @@ def generate_csv(pcap_file):
     base_name = os.path.splitext(os.path.basename(pcap_file))[0]
     csv_file = f"{base_name}_results.csv"
     
-    # Updated CSV Headers
+    # Dynamically extract site ID from filename (e.g., 'us-pao-em15' from 'us-pao-em15-mx1...')
+    name_parts = base_name.split('-')
+    site_id = "-".join(name_parts[:3]) if len(name_parts) >= 3 else name_parts[0]
+    
     headers = [
         "Site Identifier", "Instance Number", "Network Address", 
         "Manufacturer", "Connection Type", "Routing Enabled", 
@@ -188,7 +190,7 @@ def generate_csv(pcap_file):
             last_seen_date = datetime.fromtimestamp(d['last_seen']).strftime("%m/%d/%y")
             
             writer.writerow([
-                "building-name", d['device_id'], address, v_name, 
+                site_id, d['device_id'], address, v_name, 
                 d['type'], router_flag, bbmd_flag, last_seen_date
             ])
             written_addresses.add(address)
@@ -205,7 +207,7 @@ def generate_csv(pcap_file):
                 last_seen_date = datetime.fromtimestamp(t_stamp).strftime("%m/%d/%y")
                 
                 writer.writerow([
-                    "building-name", "", address, "", d['type'], 
+                    site_id, "", address, "", d['type'], 
                     router_flag, bbmd_flag, last_seen_date
                 ])
                 written_addresses.add(address)
