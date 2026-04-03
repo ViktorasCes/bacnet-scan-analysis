@@ -1,20 +1,19 @@
-# BACnet PCAP Analyser
+# BACnet PCAP Analysis
 
-A Python script designed to analyse BACnet PCAP files and generate hardware-anchored device inventories. It parses network traffic to identify IP Controllers, BBMDs, Routers, and nested MS/TP sub-networks, outputting a comprehensive device list.
+A Python script to analyse BACnet PCAP results and generate device hardware inventories. It parses network traffic to identify IP Controllers, BBMDs, Routers, and nested MS/TP sub-networks, outputting a device list.
 
 ## Features
-* **No External Dependencies:** Uses Python's built-in `subprocess` module to interface directly with TShark.
-* **Deep Packet Inspection:** Extracts original IP addresses routed inside BBMD Forwarded-NPDUs.
-* **Hardware Anchoring:** Associates Instance IDs strictly with physical MAC/IP addresses and verified `I-Am` packets.
-* **Standardised Output:** Generates a clean CSV (`<pcap_name>_results.csv`) formatted for building automation auditing and analysis.
+* Uses Python's built-in `subprocess` module to interface directly with TShark.
+* Extracts original IP addresses routed inside BBMD Forwarded-NPDUs.
+* Associates Instance IDs with physical MAC/IP addresses and `I-Am` packets.
+* Generates a CSV (`<pcap_name>_results.csv`) formatted for building automation auditing and analysis.
 
 ## Prerequisites
-The script requires **TShark** (the command-line engine for Wireshark), version 4.0 or higher. 
+The script requires **TShark** (the command-line engine for Wireshark), version 4.0 or higher.
 
 *Note: This script has been tested on Linux and macOS environments. Windows is currently unsupported.*
 
 * **Linux (Debian/Ubuntu):** `sudo apt-get install tshark`
-* **macOS:** Download the standard Wireshark installer from [wireshark.org](https://www.wireshark.org/) or install via Homebrew (`brew install wireshark`).
 
 ## Installation & Environment Setup
 
@@ -22,8 +21,8 @@ While this script has no external Python dependencies, it is recommended to run 
 
 ```bash
 # 1. Clone the repository
-git clone [https://github.com/yourusername/bacnet-analyser.git](https://github.com/yourusername/bacnet-analyser.git)
-cd bacnet-analyser
+git clone git@github.com:ViktorasCes/bacnet-scan-analysis.git
+cd bacnet-scan-analysis
 
 # 2. Create a Virtual Environment
 python3 -m venv bacnet_env
@@ -34,7 +33,7 @@ source bacnet_env/bin/activate
 
 ## Usage
 
-Run the script and pass the path to your `.pcap` or `.pcapng` file as the only argument:
+Run the script and pass the path to your `.pcap` file as the only argument:
 
 ```bash
 python3 bacnet_scan_analysis.py path/to/your_capture.pcap
