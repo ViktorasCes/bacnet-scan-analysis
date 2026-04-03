@@ -5,18 +5,29 @@ import os
 import re
 from datetime import datetime
 
-# Official ASHRAE Vendor IDs
+# Verified ASHRAE Vendor IDs (Sourced directly from Wireshark dissector definitions)
 VENDOR_REGISTRY = {
+    "0": "ASHRAE",
+    "1": "NIST",
+    "2": "The Trane Company",
+    "3": "McQuay International",
+    "4": "PolarSoft",
     "5": "Johnson Controls, Inc.",
+    "6": "American Auto-Matrix",
+    "7": "Siemens Schweiz AG",
     "8": "Delta Controls",
-    "11": "Trane",
-    "12": "Andover Controls",
-    "14": "Honeywell",
-    "17": "Alerton",
-    "18": "Automated Logic Corporation",
-    "20": "KMC Controls",
-    "23": "Reliable Controls",
-    "24": "Siemens Industry", 
+    "9": "Siemens Schweiz AG",
+    "10": "Schneider Electric",
+    "17": "Honeywell Inc.",
+    "18": "Alerton / Honeywell",
+    "19": "TAC AB",
+    "20": "Hewlett-Packard Company",
+    "21": "Dorsette's Inc.",
+    "22": "Siemens Schweiz AG",
+    "23": "York Controls Group",
+    "24": "Automated Logic Corporation",
+    "25": "CSI Control Systems International",
+    "26": "Phoenix Controls Corporation",
     "112": "Distech Controls"
 }
 
@@ -42,7 +53,7 @@ def get_pcap_info(pcap_file):
     return info
 
 def analyse_pcap(pcap_file):
-    print("Extracting full packet data and timestamps... Please wait.")
+    print(f"Analyzing {os.path.basename(pcap_file)}... Please wait.")
     
     cmd = [
         "tshark", "-r", pcap_file,
@@ -61,6 +72,12 @@ def analyse_pcap(pcap_file):
     
     result = subprocess.run(cmd, capture_output=True, text=True)
     
+    # Catch tshark failures
+    if result.returncode != 0:
+        print("\n[!] TShark encountered an error:")
+        print(result.stderr)
+        sys.exit(1)
+        
     ip_metadata = {}  
     devices = {}      
     
@@ -123,10 +140,10 @@ def analyse_pcap(pcap_file):
         else:
             devices[device_key]['last_seen'] = max(devices[device_key]['last_seen'], timestamp)
             
-        # [v1.1.0 PATCH] Safe ID & Vendor Extraction
-        # We now only capture the Instance Number if a Vendor ID is present in the same packet.
-        # This guarantees we are reading an authoritative Device Object (like an I-Am message) 
-        # instead of accidentally capturing random BACnet point reads (like Analog Input 1).
+        # [v1.2.0 PATCH] Anchored ID Extraction
+        # We only lock in the Instance Number if a Vendor ID is also present in the packet.
+        # This guarantees we are reading a structural I-Am packet (or Device Object read) 
+        # and prevents daily sensor polling (like Analog Input 1) from overwriting the Device ID.
         if vendor:
             v_id = vendor.split(',')[0].strip()
             if v_id:
@@ -139,6 +156,12 @@ def analyse_pcap(pcap_file):
     return devices, ip_metadata
 
 def generate_csv(pcap_file):
+    # Ensure file exists before proceeding to avoid 0-entry bug
+    if not os.path.isfile(pcap_file):
+        print(f"\n[!] Error: The file '{pcap_file}' was not found.")
+        print("Please check the path. If you moved into the git folder, your PCAP might be one directory up!\n")
+        sys.exit(1)
+        
     devices, ip_metadata = analyse_pcap(pcap_file)
     pcap_info = get_pcap_info(pcap_file)
     
