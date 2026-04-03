@@ -123,15 +123,18 @@ def analyse_pcap(pcap_file):
         else:
             devices[device_key]['last_seen'] = max(devices[device_key]['last_seen'], timestamp)
             
-        if instance:
-            inst = instance.split(',')[0].strip()
-            if inst and not devices[device_key]['device_id']:
-                devices[device_key]['device_id'] = inst
-                
+        # [v1.1.0 PATCH] Safe ID & Vendor Extraction
+        # We now only capture the Instance Number if a Vendor ID is present in the same packet.
+        # This guarantees we are reading an authoritative Device Object (like an I-Am message) 
+        # instead of accidentally capturing random BACnet point reads (like Analog Input 1).
         if vendor:
             v_id = vendor.split(',')[0].strip()
-            if v_id and not devices[device_key]['vendor_id']:
+            if v_id:
                 devices[device_key]['vendor_id'] = v_id
+                if instance:
+                    inst = instance.split(',')[0].strip()
+                    if inst:
+                        devices[device_key]['device_id'] = inst
 
     return devices, ip_metadata
 
@@ -157,7 +160,6 @@ def generate_csv(pcap_file):
     base_name = os.path.splitext(os.path.basename(pcap_file))[0]
     csv_file = f"{base_name}_results.csv"
     
-    # Dynamically extract site ID from filename (e.g., 'us-pao-em15' from 'us-pao-em15-mx1...')
     name_parts = base_name.split('-')
     site_id = "-".join(name_parts[:3]) if len(name_parts) >= 3 else name_parts[0]
     
