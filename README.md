@@ -1,12 +1,12 @@
 # BACnet PCAP Analysis
 
-A Python script to analyse BACnet PCAP results and generate device hardware inventories. It parses network traffic to identify IP Controllers, BBMDs, Routers, and nested MS/TP sub-networks, outputting a device list.
+A Python script to analyse BACnet PCAP results and generate device hardware inventories. It parses network traffic to identify IP Controllers, BBMDs, Routers, and nested MS/TP sub-networks, outputting a streamlined device list.
 
 ## Features
 * Uses Python's built-in `subprocess` module to interface directly with TShark.
 * Extracts original IP addresses routed inside BBMD Forwarded-NPDUs.
 * Associates Instance IDs with physical MAC/IP addresses and `I-Am` packets.
-* Generates a CSV (`<pcap_name>_results.csv`) formatted for building automation auditing and analysis.
+* Generates a clean, simplified CSV (`<pcap_name>_results.csv`) formatted for building automation auditing and analysis.
 
 ## Prerequisites
 The script requires **TShark** (the command-line engine for Wireshark), version 4.0 or higher.
@@ -60,21 +60,18 @@ Total Entries Found: 138
 
 ## CSV Output Columns
 
-Below is a breakdown of what each column in the generated CSV represents:
+The CSV export has been streamlined to include only vital hardware and routing information. Below is a breakdown of what each column represents:
 
 | Column Name | Description |
 | :--- | :--- |
-| **Monitoring Node Name** | Static field for site or building identification. |
-| **Device ID** | The Logical BACnet Instance Number (extracted safely from `I-Am` packets). |
-| **Address** | The physical location on the network (e.g., `100.67.24.91:47808` for IP endpoints or `Net: 32121/4` for MS/TP devices). |
-| **MAC Address** | Left blank (MS/TP MAC addresses are bundled directly into the Address column per convention). |
-| **Device Name** | Left blank pending future APDU text parsing enhancements. |
-| **Device Alias** | Left blank for manual entry by auditors. |
-| **Vendor Name** | The manufacturer name, translated directly from the official ASHRAE Vendor ID registry. |
-| **Device Type** | `ip` (direct ethernet endpoint) or `mstp` (routed via a serial network). |
-| **Is BACnet Router** | `True` if the node announced a Source Network header, indicating it routes traffic to sub-networks. |
-| **Is BBMD** | `True` if the node routed traffic via `bvlc.function 0x04` (Forwarded-NPDU), indicating it acts as a Broadcast Management Device. |
-| **Last Seen** | The exact Wireshark packet capture date (`MM/DD/YY`) of the most recent packet sent by the device. |
+| **Site Identifier** | Static field for site or building categorisation (defaults to `building-name`). |
+| **Instance Number** | The Logical BACnet Device ID (extracted safely from `I-Am` packets). |
+| **Network Address** | The physical location on the network (e.g., `100.67.24.91:47808` for IP endpoints or `Net: 32121/4` for MS/TP devices where the MAC is appended). |
+| **Manufacturer** | The vendor name, translated directly from the official ASHRAE Vendor ID registry. |
+| **Connection Type** | `ip` (direct Ethernet endpoint) or `mstp` (routed via a serial network). |
+| **Routing Enabled** | `True` if the node announced a Source Network header, indicating it routes traffic to sub-networks. |
+| **BBMD Enabled** | `True` if the node routed traffic via `bvlc.function 0x04` (Forwarded-NPDU), indicating it acts as a Broadcast Management Device. |
+| **Last Detected** | The exact Wireshark packet capture date (`MM/DD/YY`) of the most recent packet sent by the device. |
 
 ## Versioning
-* **v1.0.0:** Initial release. Includes TShark subprocess integration, BBMD resolution, hardware-anchored parsing, pure ASHRAE vendor mapping, duration formatting, and dynamic CSV generation.
+* **v1.0.0:** Initial release. Includes TShark subprocess integration, BBMD resolution, hardware-anchored parsing, pure ASHRAE vendor mapping, duration formatting, and streamlined dynamic CSV generation.

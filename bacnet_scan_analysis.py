@@ -158,10 +158,11 @@ def generate_csv(pcap_file):
     base_name = os.path.splitext(os.path.basename(pcap_file))[0]
     csv_file = f"{base_name}_results.csv"
     
+    # Updated CSV Headers
     headers = [
-        "Monitoring Node Name", "Device ID", "Address", "MAC Address",
-        "Device Name", "Device Alias", "Vendor Name", "Device Type",
-        "Is BACnet Router", "Is BBMD", "Last Seen"
+        "Site Identifier", "Instance Number", "Network Address", 
+        "Manufacturer", "Connection Type", "Routing Enabled", 
+        "BBMD Enabled", "Last Detected"
     ]
     
     written_addresses = set()
@@ -187,7 +188,7 @@ def generate_csv(pcap_file):
             last_seen_date = datetime.fromtimestamp(d['last_seen']).strftime("%m/%d/%y")
             
             writer.writerow([
-                "us-pao-em15", d['device_id'], address, "", "", "", v_name, 
+                "building-name", d['device_id'], address, v_name, 
                 d['type'], router_flag, bbmd_flag, last_seen_date
             ])
             written_addresses.add(address)
@@ -204,7 +205,7 @@ def generate_csv(pcap_file):
                 last_seen_date = datetime.fromtimestamp(t_stamp).strftime("%m/%d/%y")
                 
                 writer.writerow([
-                    "us-pao-em15", "", address, "", "", "", "", d['type'], 
+                    "building-name", "", address, "", d['type'], 
                     router_flag, bbmd_flag, last_seen_date
                 ])
                 written_addresses.add(address)
