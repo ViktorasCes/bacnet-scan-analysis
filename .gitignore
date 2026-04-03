@@ -1,0 +1,15 @@
+cat <<EOT >> .gitignore
+# Python virtual environments
+bacnet_env/
+venv/
+env/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+
+# Large capture and output files
+*.pcap
+*.pcapng
+*.csv
+EOT
