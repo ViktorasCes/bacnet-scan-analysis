@@ -11,7 +11,7 @@ A Python script to analyse BACnet PCAP results and generate device hardware inve
 ## Prerequisites
 The script requires **TShark** (the command-line engine for Wireshark), version 4.0 or higher.
 
-*Note: This script has been tested on Linux and macOS environments. Windows is currently unsupported.*
+*Note: This script has been tested only on a Linux environment.*
 
 * **Linux (Debian/Ubuntu):** `sudo apt-get install tshark`
 
