@@ -75,4 +75,5 @@ The CSV export has been streamlined to include only vital hardware and routing i
 | **Last Detected** | The exact Wireshark packet capture date (`MM/DD/YY`) of the most recent packet sent by the device. |
 
 ## Versioning
+* **v1.1.0 (Latest):** Bug Fix: Fixed the "Duplicate ID" bug. The parser now anchors Device ID extraction to packets containing a Vendor ID (such as I-Am messages). This prevents BACnet object polling (e.g., ReadProperty for Analog Input 1) from erroneously overwriting the Device Instance Number.
 * **v1.0.0:** Initial release. Includes TShark subprocess integration, BBMD resolution, hardware-anchored parsing, pure ASHRAE vendor mapping, duration formatting, and streamlined dynamic CSV generation.
