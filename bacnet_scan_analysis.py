@@ -5,7 +5,7 @@ import os
 import re
 from datetime import datetime
 
-# Verified ASHRAE Vendor IDs (Sourced directly from Wireshark dissector definitions)
+# Verified ASHRAE Vendor IDs
 VENDOR_REGISTRY = {
     "0": "ASHRAE",
     "1": "NIST",
@@ -28,7 +28,8 @@ VENDOR_REGISTRY = {
     "24": "Automated Logic Corporation",
     "25": "CSI Control Systems International",
     "26": "Phoenix Controls Corporation",
-    "112": "Distech Controls"
+    "112": "Distech Controls",
+    "190": "Danfoss Drives A/S"
 }
 
 def get_pcap_info(pcap_file):
@@ -53,7 +54,7 @@ def get_pcap_info(pcap_file):
     return info
 
 def analyse_pcap(pcap_file):
-    print(f"Analyzing {os.path.basename(pcap_file)}... Please wait.")
+    print(f"Analysing {os.path.basename(pcap_file)}... Please wait.")
     
     cmd = [
         "tshark", "-r", pcap_file,
@@ -65,14 +66,15 @@ def analyse_pcap(pcap_file):
         "-e", "bacnet.snet",                
         "-e", "bacnet.sadr_mstp",           
         "-e", "bacapp.instance_number",     
-        "-e", "bacapp.vendor_identifier",   
+        "-e", "bacapp.vendor_identifier",
+        "-e", "bacapp.unconfirmed_service", 
+        "-e", "bacapp.object_name",         # Extracting actual BACnet object name
         "-e", "frame.time_epoch",           
         "-E", "separator=|"
     ]
     
     result = subprocess.run(cmd, capture_output=True, text=True)
     
-    # Catch tshark failures
     if result.returncode != 0:
         print("\n[!] TShark encountered an error:")
         print(result.stderr)
@@ -84,8 +86,9 @@ def analyse_pcap(pcap_file):
     for line in result.stdout.strip().split('\n'):
         if not line: continue
         
-        parts = (line + "|||||||||").split('|')[:9]
-        ip_src, udp_port, bvlc_func, fwd_ip, snet, sadr, instance, vendor, frame_time = [p.strip() for p in parts]
+        # Padded to 11 fields to include object_name
+        parts = (line + "|||||||||||").split('|')[:11]
+        ip_src, udp_port, bvlc_func, fwd_ip, snet, sadr, instance, vendor, unconf_svc, obj_name, frame_time = [p.strip() for p in parts]
         
         ip_src = ip_src.split(',')[0]
         if not ip_src: continue 
@@ -124,49 +127,73 @@ def analyse_pcap(pcap_file):
             device_key = f"MSTP|{snet_val}|{sadr_val}"
             dev_type = "mstp"
             dev_address = f"{snet_val}/{sadr_val}"
+            gateway_ip = real_addr  # Store the routing IP encapsulating this MS/TP packet
         else:
             device_key = f"IP|{real_addr}"
             dev_type = "ip"
             dev_address = real_addr
+            gateway_ip = ""
 
         if device_key not in devices:
             devices[device_key] = {
                 'type': dev_type,
                 'address': dev_address,
+                'gateway_ip': gateway_ip,
                 'device_id': "",
+                'device_name': "",
                 'vendor_id': "",
                 'last_seen': timestamp
             }
         else:
             devices[device_key]['last_seen'] = max(devices[device_key]['last_seen'], timestamp)
+            # Ensure gateway IP is updated if discovered later
+            if not devices[device_key]['gateway_ip'] and gateway_ip:
+                devices[device_key]['gateway_ip'] = gateway_ip
+                
+        # Continually capture the object name if present in any packet related to this device
+        if obj_name:
+            extracted_name = obj_name.split(',')[0].strip()
+            if extracted_name and not devices[device_key]['device_name']:
+                devices[device_key]['device_name'] = extracted_name
             
-        # [v1.2.0 PATCH] Anchored ID Extraction
-        # We only lock in the Instance Number if a Vendor ID is also present in the packet.
-        # This guarantees we are reading a structural I-Am packet (or Device Object read) 
-        # and prevents daily sensor polling (like Analog Input 1) from overwriting the Device ID.
-        if vendor:
-            v_id = vendor.split(',')[0].strip()
-            if v_id:
-                devices[device_key]['vendor_id'] = v_id
-                if instance:
-                    inst = instance.split(',')[0].strip()
-                    if inst:
-                        devices[device_key]['device_id'] = inst
+        # Extract Device ID via strictly verified I-Am broadcasts
+        if '0' in unconf_svc.split(','):
+            if instance:
+                inst = instance.split(',')[0].strip()
+                if inst:
+                    devices[device_key]['device_id'] = inst
+            if vendor:
+                v_id = vendor.split(',')[0].strip()
+                if v_id:
+                    devices[device_key]['vendor_id'] = v_id
 
     return devices, ip_metadata
 
 def generate_csv(pcap_file):
-    # Ensure file exists before proceeding to avoid 0-entry bug
     if not os.path.isfile(pcap_file):
         print(f"\n[!] Error: The file '{pcap_file}' was not found.")
-        print("Please check the path. If you moved into the git folder, your PCAP might be one directory up!\n")
+        print("Please check the path and try again.\n")
         sys.exit(1)
         
     devices, ip_metadata = analyse_pcap(pcap_file)
     pcap_info = get_pcap_info(pcap_file)
     
-    num_ip = sum(1 for d in devices.values() if d['type'] == 'ip')
-    num_mstp = sum(1 for d in devices.values() if d['type'] == 'mstp')
+    # Pre-process final list to eliminate purely client IPs (Scanners/Workstations)
+    final_devices = []
+    for dev_key, d in devices.items():
+        is_ip = (d['type'] == 'ip')
+        address = d['address']
+        router_flag = ip_metadata.get(address, {}).get('is_router', False)
+        bbmd_flag = ip_metadata.get(address, {}).get('is_bbmd', False)
+        
+        # If an IP has no Device ID, is not routing, and is not a BBMD, it's a client. Drop it.
+        if is_ip and not d['device_id'] and not router_flag and not bbmd_flag:
+            continue
+            
+        final_devices.append((dev_key, d))
+        
+    num_ip = sum(1 for _, d in final_devices if d['type'] == 'ip')
+    num_mstp = sum(1 for _, d in final_devices if d['type'] == 'mstp')
     
     print("\n" + "="*40)
     print("      BACnet Packet Capture Results")
@@ -187,8 +214,8 @@ def generate_csv(pcap_file):
     site_id = "-".join(name_parts[:3]) if len(name_parts) >= 3 else name_parts[0]
     
     headers = [
-        "Site Identifier", "Instance Number", "Network Address", 
-        "Manufacturer", "Connection Type", "Routing Enabled", 
+        "Site Identifier", "Instance Number", "Device Name", "Network Address", 
+        "Gateway IP", "Manufacturer", "Connection Type", "Routing Enabled", 
         "BBMD Enabled", "Last Detected"
     ]
     
@@ -198,41 +225,37 @@ def generate_csv(pcap_file):
         writer = csv.writer(f)
         writer.writerow(headers)
         
-        for dev_key in sorted(devices.keys(), key=lambda x: int(devices[x]['device_id']) if devices[x]['device_id'].isdigit() else 0):
-            d = devices[dev_key]
+        # 1. Write Identified Hardware
+        for dev_key, d in sorted(final_devices, key=lambda x: int(x[1]['device_id']) if x[1]['device_id'].isdigit() else 0):
             if not d['device_id']:
                 continue 
                 
-            is_ip = (d['type'] == 'ip')
             address = d['address']
+            v_name = VENDOR_REGISTRY.get(d['vendor_id'], f"Vendor ID: {d['vendor_id']}") if d['vendor_id'] else ""
             
-            v_name = ""
-            if d['vendor_id']:
-                v_name = VENDOR_REGISTRY.get(d['vendor_id'], f"Vendor ID: {d['vendor_id']}")
-                
-            router_flag = str(ip_metadata.get(address, {}).get('is_router', False)) if is_ip else "False"
-            bbmd_flag = str(ip_metadata.get(address, {}).get('is_bbmd', False)) if is_ip else "False"
+            router_flag = str(ip_metadata.get(address, {}).get('is_router', False)) if d['type'] == 'ip' else "False"
+            bbmd_flag = str(ip_metadata.get(address, {}).get('is_bbmd', False)) if d['type'] == 'ip' else "False"
             last_seen_date = datetime.fromtimestamp(d['last_seen']).strftime("%m/%d/%y")
             
             writer.writerow([
-                site_id, d['device_id'], address, v_name, 
+                site_id, d['device_id'], d['device_name'], address, d['gateway_ip'], v_name, 
                 d['type'], router_flag, bbmd_flag, last_seen_date
             ])
             written_addresses.add(address)
                 
-        for dev_key, d in devices.items():
+        # 2. Write Ghost Infrastructure (Routers/BBMDs without IDs)
+        for dev_key, d in final_devices:
             if not d['device_id'] and d['address'] not in written_addresses:
-                is_ip = (d['type'] == 'ip')
                 address = d['address']
                 
-                router_flag = str(ip_metadata.get(address, {}).get('is_router', False)) if is_ip else "False"
-                bbmd_flag = str(ip_metadata.get(address, {}).get('is_bbmd', False)) if is_ip else "False"
+                router_flag = str(ip_metadata.get(address, {}).get('is_router', False)) if d['type'] == 'ip' else "False"
+                bbmd_flag = str(ip_metadata.get(address, {}).get('is_bbmd', False)) if d['type'] == 'ip' else "False"
                 
                 t_stamp = ip_metadata.get(address, {}).get('last_seen', d['last_seen'])
                 last_seen_date = datetime.fromtimestamp(t_stamp).strftime("%m/%d/%y")
                 
                 writer.writerow([
-                    site_id, "", address, "", d['type'], 
+                    site_id, "", d['device_name'], address, d['gateway_ip'], "", d['type'], 
                     router_flag, bbmd_flag, last_seen_date
                 ])
                 written_addresses.add(address)

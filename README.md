@@ -5,7 +5,8 @@ A Python script to analyse BACnet PCAP results and generate device hardware inve
 ## Features
 * Uses Python's built-in `subprocess` module to interface directly with TShark.
 * Extracts original IP addresses routed inside BBMD Forwarded-NPDUs.
-* Associates Instance IDs with physical MAC/IP addresses and `I-Am` packets.
+* Associates Instance IDs securely with physical MAC/IP addresses via `I-Am` packet anchoring.
+* Extracts true, on-the-wire BACnet object names dynamically.
 * Generates a clean, simplified CSV (`<pcap_name>_results.csv`) formatted for building automation auditing and analysis.
 * Dynamically extracts the Site Identifier directly from the PCAP filename.
 
@@ -20,7 +21,7 @@ The script requires **TShark** (the command-line engine for Wireshark), version 
 
 While this script has no external Python dependencies, it is recommended to run it inside a virtual environment to maintain a clean workspace.
 
-```bash
+~~~bash
 # 1. Clone the repository
 git clone git@github.com:ViktorasCes/bacnet-scan-analysis.git
 cd bacnet-scan-analysis
@@ -30,20 +31,20 @@ python3 -m venv bacnet_env
 
 # 3. Activate the Environment
 source bacnet_env/bin/activate
-```
+~~~
 
 ## Usage
 
 Run the script and pass the path to your `.pcap` file as the only argument:
 
-```bash
+~~~bash
 python3 bacnet_scan_analysis.py path/to/your_capture.pcap
-```
+~~~
 
 ### Expected Console Output
 The script will print a summary of the capture metadata and device counts:
 
-```text
+~~~text
 ========================================
       BACnet Packet Capture Results
 ========================================
@@ -57,7 +58,7 @@ Total Entries Found: 138
 ========================================
 
 [+] Successfully saved BACnet Packet Capture Results to: building-name-mx1-1-01_2025-12-29_17-37-45_results.csv
-```
+~~~
 
 ## CSV Output Columns
 
@@ -67,7 +68,9 @@ The CSV export has been streamlined to include only vital hardware and routing i
 | :--- | :--- |
 | **Site Identifier** | Dynamically extracted from the PCAP filename (e.g., `building-name`). |
 | **Instance Number** | The Logical BACnet Device ID (extracted safely from `I-Am` packets). |
+| **Device Name** | The actual BACnet `objectName` broadcasted by the device. |
 | **Network Address** | The physical location on the network (e.g., `100.67.24.91:47808` for IP endpoints or `Net: 32121/4` for MS/TP devices where the MAC is appended). |
+| **Gateway IP** | For MS/TP devices, the IP address of the BACnet Router that encapsulated the sub-network traffic. Left blank for direct IP endpoints. |
 | **Manufacturer** | The vendor name, translated directly from the official ASHRAE Vendor ID registry. |
 | **Connection Type** | `ip` (direct Ethernet endpoint) or `mstp` (routed via a serial network). |
 | **Routing Enabled** | `True` if the node announced a Source Network header, indicating it routes traffic to sub-networks. |
@@ -75,6 +78,7 @@ The CSV export has been streamlined to include only vital hardware and routing i
 | **Last Detected** | The exact Wireshark packet capture date (`MM/DD/YY`) of the most recent packet sent by the device. |
 
 ## Versioning
-* **v1.2.0 (Latest)**: Bug Fix: Repaired the VENDOR_REGISTRY using verified Wireshark dissector definitions (Vendor ID 24 is now correctly mapped to Automated Logic Corporation). UX Fix: Added file-existence validation to gracefully catch errors if a PCAP file path is incorrect, preventing silent "0 Entries Found" bugs.
-* **v1.1.0:** Bug Fix: Fixed the "Duplicate ID" bug. The parser now anchors Device ID extraction to packets containing a Vendor ID (such as I-Am messages). This prevents BACnet object polling (e.g., ReadProperty for Analog Input 1) from erroneously overwriting the Device Instance Number.
-* **v1.0.0:** Initial release. Includes TShark subprocess integration, BBMD resolution, hardware-anchored parsing, pure ASHRAE vendor mapping, duration formatting, and streamlined dynamic CSV generation.
+* **v1.4.0 (Latest)**: Feature: Added extraction of the true `bacapp.object_name` directly from the traffic instead of synthesising a generic string. Feature: Added a `Gateway IP` column to easily identify which BACnet router is hosting each MS/TP network.
+* **v1.3.0**: Bug Fix: Eliminated the "Duplicate Instance 1" bug by securely anchoring ID extractions strictly to `I-Am` broadcast messages, avoiding pollution from point polling. UX Fix: Filtered out pure client/scanner IP addresses to ensure the final inventory accurately reflects physical infrastructure.
+* **v1.2.0**: Bug Fix: Repaired the VENDOR_REGISTRY using verified Wireshark dissector definitions (Vendor ID 24 is now correctly mapped to Automated Logic Corporation). UX Fix: Added file-existence validation to gracefully catch errors if a PCAP file path is incorrect.
+* **v1.0.0:** Initial release. Includes TShark subprocess integration, BBMD resolution, ASHRAE vendor mapping, duration formatting, and output CSV generation.
