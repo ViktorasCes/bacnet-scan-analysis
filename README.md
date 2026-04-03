@@ -47,7 +47,7 @@ The script will print a summary of the capture metadata and device counts:
 ========================================
       BACnet Packet Capture Results
 ========================================
-File:           us-pao-em15-mx1-1-01_2025-12-29_17-37-45.pcap
+File:           building-name-mx1-1-01_2025-12-29_17-37-45.pcap
 Duration:       0 hours 59 minutes (3598.47 seconds)
 ----------------------------------------
 Total IP Endpoints:  119
@@ -56,7 +56,7 @@ Total MSTP Devices:  19
 Total Entries Found: 138
 ========================================
 
-[+] Successfully saved BACnet Packet Capture Results to: us-pao-em15-mx1-1-01_2025-12-29_17-37-45_results.csv
+[+] Successfully saved BACnet Packet Capture Results to: building-name-mx1-1-01_2025-12-29_17-37-45_results.csv
 ```
 
 ## CSV Output Columns
@@ -65,7 +65,7 @@ The CSV export has been streamlined to include only vital hardware and routing i
 
 | Column Name | Description |
 | :--- | :--- |
-| **Site Identifier** | Dynamically extracted from the PCAP filename (e.g., `us-pao-em15`). |
+| **Site Identifier** | Dynamically extracted from the PCAP filename (e.g., `building-name`). |
 | **Instance Number** | The Logical BACnet Device ID (extracted safely from `I-Am` packets). |
 | **Network Address** | The physical location on the network (e.g., `100.67.24.91:47808` for IP endpoints or `Net: 32121/4` for MS/TP devices where the MAC is appended). |
 | **Manufacturer** | The vendor name, translated directly from the official ASHRAE Vendor ID registry. |
