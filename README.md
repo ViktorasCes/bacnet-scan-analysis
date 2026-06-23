@@ -16,6 +16,8 @@ The script requires **TShark** (the command-line engine for Wireshark), version 
 *Note: This script has been tested only on a Linux environment.*
 
 * **Linux (Debian/Ubuntu):** `sudo apt-get install tshark`
+  * **Important:** During installation, an interactive prompt will appear asking: *"Should non-superusers be able to capture packets?"* 
+  * Select **`<No>`** to proceed.
 
 ## Installation & Environment Setup
 
