@@ -23,7 +23,7 @@ While this script has no external Python dependencies, it is recommended to run 
 
 ~~~bash
 # 1. Clone the repository
-git clone git@github.com:ViktorasCes/bacnet-scan-analysis.git
+git clone https://github.com/ViktorasCes/bacnet-scan-analysis.git
 cd bacnet-scan-analysis
 
 # 2. Create a Virtual Environment
