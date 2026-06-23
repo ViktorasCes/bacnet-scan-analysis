@@ -26,7 +26,8 @@ While this script has no external Python dependencies, it is recommended to run 
 git clone https://github.com/ViktorasCes/bacnet-scan-analysis.git
 cd bacnet-scan-analysis
 
-# 2. Create a Virtual Environment
+# 2. Install the venv package and create a Virtual Environment
+sudo apt update && sudo apt install python3-venv -y
 python3 -m venv bacnet_env
 
 # 3. Activate the Environment
